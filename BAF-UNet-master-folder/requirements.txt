@@ -1,3 +1,19 @@
+# # matplotlib==3.6.2
+# # numpy==1.23.5
+# # Pillow==9.3.0
+# # tqdm==4.64.1
+# # wandb==0.13.5
+
+# # Current + additions
+# matplotlib==3.6.2
+# numpy==1.26.4
+# Pillow==9.3.0
+# tqdm==4.64.1
+# wandb==0.13.5
+# # Add for vision transformer (optional, we'll implement lightweight)
+# einops  # for patching if needed
+
+
 # matplotlib==3.6.2
 # numpy==1.23.5
 # Pillow==9.3.0

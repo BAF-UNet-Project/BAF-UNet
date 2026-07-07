@@ -1,28 +1,12 @@
 import torch
 
 
-def iou_score(preds, targets, smooth=1e-6):
-    """
-    Computes IoU (Intersection over Union)
-    for binary segmentation.
+def iou_score(pred, target, smooth=1e-6):
 
-    Args:
-        preds: predicted masks
-        targets: ground truth masks
+    pred = (pred == 1).float()
+    target = (target == 1).float()
 
-    Returns:
-        IoU score
-    """
+    intersection = (pred * target).sum()
+    union = pred.sum() + target.sum() - intersection
 
-    preds = preds.float()
-    targets = targets.float()
-
-    intersection = (preds * targets).sum()
-
-    total = preds.sum() + targets.sum()
-
-    union = total - intersection
-
-    iou = (intersection + smooth) / (union + smooth)
-
-    return iou
+    return (intersection + smooth) / (union + smooth)
