@@ -186,7 +186,7 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # ====================== CONFIG ======================
 IMAGE_SIZE = 512
-BATCH_SIZE = 2                    # You can increase this (4~8) if you have enough VRAM
+BATCH_SIZE = 12                    # You can increase this (4~8) if you have enough VRAM
 CHECKPOINT_PATH = 'checkpoints/best_model.pth'
 
 # ====================== DATASET ======================
