@@ -342,10 +342,10 @@ from models.baf_unet import BAFUNet
 from utils.losses import BoundaryAwareLoss
 
 # ====================== CONFIG ======================
-IMAGE_SIZE = 256          # Paper uses 512x512
-BATCH_SIZE = 1         # Paper: batch size = 12
+IMAGE_SIZE = 512          # Paper uses 512x512
+BATCH_SIZE = 12         # Paper: batch size = 12
 NUM_WORKERS = 4
-EPOCHS = 100              # Paper: 600 epochs
+EPOCHS = 600              # Paper: 600 epochs
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 os.makedirs('checkpoints', exist_ok=True)
