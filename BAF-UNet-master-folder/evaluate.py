@@ -9,14 +9,14 @@ from utils.metrics import compute_all_metrics
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # ====================== CONFIG ======================
-IMAGE_SIZE = 256
-BATCH_SIZE = 2                    # You can increase this (4~8) if you have enough VRAM
+IMAGE_SIZE = 512
+BATCH_SIZE = 12                    # You can increase this (4~8) if you have enough VRAM
 CHECKPOINT_PATH = 'checkpoints/best_bafunet.pth'
 
 # ====================== DATASET ======================
 dataset = BasicDataset(
-    images_dir='datasets/ISIC2017/test_images',
-    mask_dir='datasets/ISIC2017/test_masks',
+    images_dir='/workspace/datasets/ISIC2017/test_images',
+    mask_dir='/workspace/datasets/ISIC2017/test_masks',
     image_size=IMAGE_SIZE,
     mask_suffix='_segmentation',
 )
