@@ -1,416 +1,117 @@
-
-
-
-
-
-# import logging
-# import numpy as np
-# import torch
-
-# from PIL import Image
-# from pathlib import Path
-# from os import listdir
-# from os.path import splitext, isfile, join
-
-# from torch.utils.data import Dataset
-
-
-# # =========================================================
-# # IMAGE LOADER
-# # =========================================================
-
-# def load_image(filename):
-
-#     ext = splitext(filename)[1]
-
-#     if ext == '.npy':
-#         return Image.fromarray(np.load(filename))
-
-#     elif ext in ['.pt', '.pth']:
-#         return Image.fromarray(torch.load(filename).numpy())
-
-#     else:
-#         return Image.open(filename)
-
-
-# # =========================================================
-# # FIND UNIQUE MASK VALUES
-# # =========================================================
-
-# def unique_mask_values(idx, mask_dir, mask_suffix):
-
-#     mask_file = list(
-#         mask_dir.glob(idx + mask_suffix + '.*')
-#     )
-
-#     if len(mask_file) == 0:
-#         raise FileNotFoundError(
-#             f'No mask found for image: {idx}'
-#         )
-
-#     mask = np.asarray(load_image(mask_file[0]))
-
-#     if mask.ndim == 2:
-#         return np.unique(mask)
-
-#     elif mask.ndim == 3:
-#         mask = mask.reshape(-1, mask.shape[-1])
-#         return np.unique(mask, axis=0)
-
-#     else:
-#         raise ValueError(
-#             f'Mask should have 2 or 3 dimensions, got {mask.ndim}'
-#         )
-
-
-# # =========================================================
-# # BASIC DATASET
-# # =========================================================
-
-# class BasicDataset(Dataset):
-
-#     def __init__(
-#         self,
-#         images_dir: str,
-#         mask_dir: str,
-#         image_size: int = 256,
-#         mask_suffix: str = '',
-#         transform=None
-#     ):
-
-#         self.images_dir = Path(images_dir)
-#         self.mask_dir = Path(mask_dir)
-
-#         self.image_size = image_size
-#         self.mask_suffix = mask_suffix
-
-#         # NEW
-#         self.transform = transform
-
-#         # -------------------------------------------------
-#         # IMAGE IDS
-#         # -------------------------------------------------
-
-#         self.ids = [
-#             splitext(file)[0]
-#             for file in listdir(images_dir)
-#             if isfile(join(images_dir, file))
-#             and not file.startswith('.')
-#         ]
-
-#         if not self.ids:
-#             raise RuntimeError(
-#                 f'No input file found in {images_dir}'
-#             )
-
-#         logging.info(
-#             f'Creating dataset with {len(self.ids)} examples'
-#         )
-
-#         # -------------------------------------------------
-#         # SCAN MASK VALUES
-#         # -------------------------------------------------
-
-#         logging.info('Scanning mask files...')
-
-#         unique = [
-#             unique_mask_values(
-#                 idx,
-#                 self.mask_dir,
-#                 self.mask_suffix
-#             )
-#             for idx in self.ids
-#         ]
-
-#         self.mask_values = list(
-#             sorted(
-#                 np.unique(
-#                     np.concatenate(unique),
-#                     axis=0
-#                 ).tolist()
-#             )
-#         )
-
-#         logging.info(
-#             f'Unique mask values: {self.mask_values}'
-#         )
-
-#     # =====================================================
-#     # DATASET LENGTH
-#     # =====================================================
-
-#     def __len__(self):
-#         return len(self.ids)
-
-#     # =====================================================
-#     # PREPROCESSING
-#     # =====================================================
-
-#     @staticmethod
-#     def preprocess(
-#         mask_values,
-#         pil_img,
-#         image_size,
-#         is_mask
-#     ):
-
-#         # -------------------------------------------------
-#         # RESIZE
-#         # -------------------------------------------------
-
-#         pil_img = pil_img.resize(
-#             (image_size, image_size),
-#             resample=Image.NEAREST if is_mask else Image.BICUBIC
-#         )
-
-#         img = np.asarray(pil_img)
-
-#         # -------------------------------------------------
-#         # MASK PROCESSING
-#         # -------------------------------------------------
-
-#         if is_mask:
-
-#             if img.ndim == 3:
-#                 img = img[..., 0]
-
-#             img = (img > 0).astype(np.int64)
-
-#             return img
-
-#         # -------------------------------------------------
-#         # IMAGE PROCESSING
-#         # -------------------------------------------------
-
-#         else:
-
-#             if pil_img.mode != 'RGB':
-#                 pil_img = pil_img.convert('RGB')
-
-#             img = np.asarray(pil_img)
-
-#             # Normalize
-#             img = img.astype(np.float32) / 255.0
-
-#             return img
-
-#     # =====================================================
-#     # GET ITEM
-#     # =====================================================
-
-#     def __getitem__(self, idx):
-
-#         name = self.ids[idx]
-
-#         mask_file = list(
-#             self.mask_dir.glob(
-#                 name + self.mask_suffix + '.*'
-#             )
-#         )
-
-#         img_file = list(
-#             self.images_dir.glob(
-#                 name + '.*'
-#             )
-#         )
-
-#         if len(img_file) != 1:
-#             raise RuntimeError(
-#                 f'Image issue for ID: {name}'
-#             )
-
-#         if len(mask_file) != 1:
-#             raise RuntimeError(
-#                 f'Mask issue for ID: {name}'
-#             )
-
-#         mask = load_image(mask_file[0])
-#         img = load_image(img_file[0])
-
-#         if img.size != mask.size:
-#             raise RuntimeError(
-#                 f'Size mismatch for {name}: '
-#                 f'Image={img.size}, Mask={mask.size}'
-#             )
-
-#         # -------------------------------------------------
-#         # PREPROCESS
-#         # -------------------------------------------------
-
-#         img = self.preprocess(
-#             self.mask_values,
-#             img,
-#             self.image_size,
-#             is_mask=False
-#         )
-
-#         mask = self.preprocess(
-#             self.mask_values,
-#             mask,
-#             self.image_size,
-#             is_mask=True
-#         )
-
-#         # =================================================
-#         # AUGMENTATION
-#         # =================================================
-
-#         if self.transform is not None:
-
-#             transformed = self.transform(
-#                 image=img,
-#                 mask=mask
-#             )
-
-#             img = transformed['image']
-#             mask = transformed['mask']
-
-#         # =================================================
-#         # HWC -> CHW
-#         # =================================================
-
-#         img = img.transpose((2, 0, 1))
-
-#         return {
-#             'image': torch.as_tensor(img.copy()).float().contiguous(),
-#             'mask': torch.as_tensor(mask.copy()).long().contiguous()
-#         }
-
-
-# # =========================================================
-# # CARVANA DATASET
-# # =========================================================
-
-# class CarvanaDataset(BasicDataset):
-
-#     def __init__(
-#         self,
-#         images_dir,
-#         mask_dir,
-#         image_size=512,
-#         transform=None
-#     ):
-
-#         super().__init__(
-#             images_dir=images_dir,
-#             mask_dir=mask_dir,
-#             image_size=image_size,
-#             mask_suffix='_Segmentation',
-#             transform=transform
-#         )
-
-
-
-
 import logging
+from pathlib import Path
 import numpy as np
 import torch
-
-from pathlib import Path
-from os import listdir
-from os.path import splitext, isfile, join
-
-from torch.utils.data import Dataset
 from PIL import Image
-
+from torch.utils.data import Dataset
 
 class BasicDataset(Dataset):
+    IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
+    MASK_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+
     def __init__(
         self,
         images_dir: str,
         mask_dir: str,
-        image_size: int = 512,
-        mask_suffix: str = '_Segmentation',
+        image_size: int = 256,
+        mask_suffix: str = "_segmentation",
         transform=None
     ):
+        super().__init__()
+
         self.images_dir = Path(images_dir)
         self.mask_dir = Path(mask_dir)
         self.image_size = image_size
         self.mask_suffix = mask_suffix
         self.transform = transform
 
-        # Get image IDs
-        self.ids = [
-            splitext(file)[0]
-            for file in listdir(images_dir)
-            if isfile(join(images_dir, file)) and not file.startswith('.')
-        ]
+        if not self.images_dir.exists() or not self.mask_dir.exists():
+            raise FileNotFoundError("Image or Mask directory does not exist.")
 
-        if not self.ids:
-            raise RuntimeError(f'No images found in {images_dir}')
+        # 1. Fetch input images
+        image_files = sorted([
+            f for f in self.images_dir.iterdir()
+            if f.is_file() and f.suffix.lower() in self.IMAGE_EXTENSIONS and not f.name.startswith(".")
+        ])
 
-        logging.info(f'Creating dataset with {len(self.ids)} examples')
+        if not image_files:
+            raise RuntimeError(f"No JPEG images found in {self.images_dir}")
 
-        # Scan unique mask values (for multi-class, but we use binary)
-        logging.info('Scanning mask files...')
-        unique = []
-        for idx in self.ids:
-            mask_file = list(self.mask_dir.glob(idx + mask_suffix + '.*'))
-            if mask_file:
-                mask = np.asarray(Image.open(mask_file[0]))
-                unique.append(np.unique(mask))
+        # 2. Build a Mask Map ONCE (O(N) instead of O(N^2))
+        mask_map = {
+            f.stem: f for f in self.mask_dir.iterdir()
+            if f.is_file() and f.suffix.lower() in self.MASK_EXTENSIONS
+        }
 
-        self.mask_values = list(sorted(np.unique(np.concatenate(unique)).tolist()))
-        logging.info(f'Unique mask values: {self.mask_values}')
+        # 3. Match images with masks instantaneously in memory
+        self.samples = []
+        self.missing_masks = []
+
+        for image_file in image_files:
+            image_id = image_file.stem
+            expected_mask_name = image_id + self.mask_suffix
+
+            if expected_mask_name in mask_map:
+                self.samples.append({
+                    "id": image_id,
+                    "image": image_file,
+                    "mask": mask_map[expected_mask_name]
+                })
+            else:
+                self.missing_masks.append(image_file.name)
+
+        if not self.samples:
+            raise RuntimeError(f"No valid image-mask pairs matched with suffix '{self.mask_suffix}'.")
+
+        self.ids = [sample["id"] for sample in self.samples]
+        self.mask_values = [0, 1]  # Standard binary mask values
 
     def __len__(self):
-        return len(self.ids)
+        return len(self.samples)
 
     @staticmethod
     def preprocess(pil_img, image_size, is_mask):
-        """Preprocess image or mask"""
-        pil_img = pil_img.resize((image_size, image_size),
-                                 resample=Image.NEAREST if is_mask else Image.BICUBIC)
-
-        img = np.asarray(pil_img)
+        pil_img = pil_img.resize(
+            (image_size, image_size),
+            resample=Image.Resampling.NEAREST if is_mask else Image.Resampling.BICUBIC
+        )
 
         if is_mask:
-            if img.ndim == 3:
-                img = img[..., 0]
-            img = (img > 0).astype(np.int64)
-            return img
+            mask = np.asarray(pil_img)
+            if mask.ndim == 3:
+                mask = mask[..., 0]
+            return (mask > 0).astype(np.int64)
+
         else:
-            if pil_img.mode != 'RGB':
-                pil_img = pil_img.convert('RGB')
-            img = np.asarray(pil_img).astype(np.float32) / 255.0
-            return img
+            if pil_img.mode != "RGB":
+                pil_img = pil_img.convert("RGB")
+            image = np.asarray(pil_img).astype(np.float32)
+            return image / 255.0
 
     def __getitem__(self, idx):
-        name = self.ids[idx]
+        sample = self.samples[idx]
 
-        # Find files
-        img_file = list(self.images_dir.glob(name + '.*'))[0]
-        mask_file = list(self.mask_dir.glob(name + self.mask_suffix + '.*'))[0]
+        with Image.open(sample["image"]) as img:
+            image = img.convert("RGB").copy()
 
-        img = Image.open(img_file).convert('RGB')
-        mask = Image.open(mask_file)
+        with Image.open(sample["mask"]) as msk:
+            mask = msk.copy()
 
-        # Preprocess
-        img = self.preprocess(img, self.image_size, is_mask=False)
+        image = self.preprocess(image, self.image_size, is_mask=False)
         mask = self.preprocess(mask, self.image_size, is_mask=True)
 
-        # Apply Albumentations transform
         if self.transform is not None:
-            transformed = self.transform(image=img, mask=mask)
-            img = transformed['image']
-            mask = transformed['mask']
+            transformed = self.transform(image=image, mask=mask)
+            image = transformed["image"]
+            mask = transformed["mask"]
 
-        # Convert to tensor
-        img = img.transpose((2, 0, 1))   # HWC -> CHW
+        if isinstance(image, np.ndarray):
+            image = torch.from_numpy(image.transpose((2, 0, 1))).float()
+
+        if isinstance(mask, np.ndarray):
+            mask = torch.from_numpy(mask).long()
 
         return {
-            'image': torch.as_tensor(img.copy()).float().contiguous(),
-            'mask': torch.as_tensor(mask.copy()).long().contiguous()
+            "image": image.contiguous(),
+            "mask": mask.contiguous()
         }
-
-
-# Optional: For Carvana-style datasets
-class CarvanaDataset(BasicDataset):
-    def __init__(self, images_dir, mask_dir, image_size=512, transform=None):
-        super().__init__(
-            images_dir=images_dir,
-            mask_dir=mask_dir,
-            image_size=image_size,
-            mask_suffix='_Segmentation',
-            transform=transform
-        )
