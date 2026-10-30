@@ -8,18 +8,34 @@ from utils.metrics import compute_all_metrics
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+# # ====================== CONFIG ======================
+# IMAGE_SIZE = 256
+# BATCH_SIZE = 16                    # You can increase this (4~8) if you have enough VRAM
+# CHECKPOINT_PATH = 'checkpoints/best_bafunet.pth'
+
+# # ====================== DATASET ======================
+# dataset = BasicDataset(
+#     images_dir='datasets/PH2DataSet/val_images',
+#     mask_dir='datasets/PH2DataSet/val_masks',
+#     image_size=IMAGE_SIZE,
+#     mask_suffix='_segmentation',
+# )
+
+
 # ====================== CONFIG ======================
 IMAGE_SIZE = 512
-BATCH_SIZE = 12                    # You can increase this (4~8) if you have enough VRAM
+BATCH_SIZE = 9                    # You can increase this (4~8) if you have enough VRAM
+# CHECKPOINT_PATH = 'checkpoints/best_model.pth'
 CHECKPOINT_PATH = 'checkpoints/best_bafunet.pth'
 
 # ====================== DATASET ======================
 dataset = BasicDataset(
-    images_dir='/workspace/datasets/ISIC2017/test_images',
-    mask_dir='/workspace/datasets/ISIC2017/test_masks',
+    images_dir='datasets/ISIC2017/test_images',
+    mask_dir='datasets/ISIC2017/test_masks',
     image_size=IMAGE_SIZE,
     mask_suffix='_segmentation',
 )
+
 
 loader = DataLoader(
     dataset, 
@@ -57,11 +73,11 @@ avg_metrics = {k: sum(m[k] for m in all_metrics) / len(all_metrics)
                for k in all_metrics[0].keys()}
 
 print("=" * 60)
-print("BAF-UNet - ISIC2016 Test Set Results")
+print("BAF-UNet -ISIC2017 Test Set Results ")
 print("=" * 60)
 print(f"IoU     : {avg_metrics['IoU']:.4f}")
 print(f"DSC     : {avg_metrics['DSC']:.4f}")
 print(f"Accuracy: {avg_metrics['Acc']:.4f}")
-print(f"Sensitivity : {avg_metrics['Sen']:.4f}")
 print(f"Specificity : {avg_metrics['Spe']:.4f}")
+print(f"Sensitivity : {avg_metrics['Sen']:.4f}")
 print("=" * 60)

@@ -20,8 +20,8 @@ from utils.losses import BoundaryAwareLoss
 
 # ====================== CONFIG ======================
 IMAGE_SIZE = 512        # Paper uses 512x512
-BATCH_SIZE = 12          # Paper: batch size = 12
-NUM_WORKERS = 4 
+BATCH_SIZE = 9         # Paper: batch size = 12
+NUM_WORKERS = 2 
 EPOCHS = 120              # Paper: 600 epochs
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -38,10 +38,10 @@ train_transform = A.Compose([
 
 # ====================== DATASET & LOADER ======================
 train_dataset = BasicDataset(
-    images_dir='/workspace/datasets/ISIC2017/train_images',
-    mask_dir='/workspace/datasets/ISIC2017/train_masks',
+    images_dir='/content/drive/MyDrive/BAF-UNet-master-folder/datasets/ISIC2016/train_images',
+    mask_dir='/content/drive/MyDrive/BAF-UNet-master-folder/datasets/ISIC2016/train_masks',
     image_size=IMAGE_SIZE,
-    mask_suffix='_segmentation',
+    mask_suffix='_Segmentation',
     transform=train_transform
 )
 
